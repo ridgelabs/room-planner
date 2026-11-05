@@ -345,6 +345,16 @@ const LAYOUTS=[
   {type:'dresser',name:'Dresser',w:60,h:45,rot:270,x:243,y:65},
   {type:'wardrobe',name:'4-door wardrobe',w:180,h:50,rot:90,x:249,y:125},
   {type:'door',name:'Bathroom door',w:75,h:75,rot:270,x:0,y:345},
+  {type:'door',name:'Door',w:90,h:90,rot:180,x:209,y:330}]},
+ // As Default 4, but the dresser stands on its own on the left wall, above the bathroom door
+ {name:'Default 5',room:{len:420,wTop:288,extra:11,notch:125},items:[
+  {type:'window',name:'Window',w:150,h:5,rot:0,x:69,y:0},
+  {type:'side',name:'Side table',w:45,h:40,rot:180,x:0,y:0},
+  {type:'bed',name:'Queen bed',w:152,h:198,rot:0,x:45,y:0},
+  {type:'side',name:'Side table',w:45,h:40,rot:180,x:197,y:0},
+  {type:'wardrobe',name:'4-door wardrobe',w:180,h:50,rot:90,x:249,y:125},
+  {type:'dresser',name:'Dresser',w:60,h:45,rot:90,x:0,y:235},
+  {type:'door',name:'Bathroom door',w:75,h:75,rot:270,x:0,y:345},
   {type:'door',name:'Door',w:90,h:90,rot:180,x:209,y:330}]}
 ];
 function loadLayout(L){S.room={...L.room};S.items=L.items.map(o=>({...o,id:uid++}))}
@@ -958,7 +968,7 @@ document.addEventListener('keydown',e=>{
    tab comes back into view) fetch the page fresh; if its BUILD stamp differs, reload once with
    a cache-busting ?v= so the browser and CDN serve the new file. Change BUILD on every
    release (any new value works; a UTC timestamp is used). */
-const BUILD='20261105163257';
+const BUILD='20261105163714';
 async function checkForUpdate(){
   if(location.protocol==='file:')return;
   try{
