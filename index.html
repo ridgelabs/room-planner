@@ -119,7 +119,17 @@ input[type=number],input[type=text]{font-family:var(--f-mono);font-size:.88rem;c
 .lay small{font-size:.72rem;color:var(--muted);font-family:var(--f-mono)}
 .lay.armed{border-color:var(--accent);background:var(--accent-soft)}
 .lay.armed small{color:var(--accent);font-family:var(--f-ui);font-weight:600}
-.note{font-size:.76rem;color:var(--muted);margin:12px 0 0}
+.note{font-size:.76rem;color:var(--muted);margin:12px 0 0;line-height:1.45}
+.lay-w{position:relative;display:flex}
+.lay-w .lay{flex:1}
+.lay-x{position:absolute;top:6px;right:6px;width:28px;height:28px;border-radius:8px;display:grid;place-items:center;background:var(--sheet);border:1px solid var(--line);color:var(--muted)}
+.lay-x svg.i{width:14px;height:14px}
+.lay-x.armed{background:var(--danger);border-color:var(--danger);color:#fff;width:auto;padding:0 8px;font-size:.72rem;font-weight:600}
+.btn{display:inline-flex;align-items:center;gap:6px}
+.btn svg.i{width:16px;height:16px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--sheet)}
+.toast{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);z-index:30;background:var(--ink);color:var(--sheet);font-size:.82rem;font-weight:500;padding:9px 14px;border-radius:10px;box-shadow:var(--shadow);max-width:calc(100% - 32px);text-align:center}
+.toast.bad{background:var(--danger);color:#fff}
 
 /* bottom bar (phones) */
 .bar{display:none}
@@ -195,6 +205,7 @@ input[type=number],input[type=text]{font-family:var(--f-mono);font-size:.88rem;c
       <svg class="i" viewBox="0 0 24 24"><path d="M3 9V4a1 1 0 0 1 1-1h5M15 3h5a1 1 0 0 1 1 1v5M21 15v5a1 1 0 0 1-1 1h-5M9 21H4a1 1 0 0 1-1-1v-5"/></svg>
     </button>
     <div class="tip" id="tip"><span id="tipText"></span></div>
+    <div class="toast" id="toast" role="status" hidden></div>
 
     <div class="pop" id="pop" hidden>
       <div class="pop-h"><b id="popName"></b><span id="popSize"></span></div>
@@ -233,7 +244,12 @@ input[type=number],input[type=text]{font-family:var(--f-mono);font-size:.88rem;c
     <section class="sheet" id="shLayouts">
       <div class="sh-h"><h2>Layouts</h2><button class="x" data-close aria-label="Close"><svg class="i" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
       <div class="lays" id="layouts"></div>
-      <p class="note">Loading a layout replaces what's on the plan now.</p>
+      <div class="row">
+        <button class="btn primary" id="bShare"><svg class="i" viewBox="0 0 24 24"><path d="M12 3v12M7 8l5-5 5 5M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></svg>Share layout</button>
+        <button class="btn" id="bOpen"><svg class="i" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>Open layout file</button>
+        <input type="file" id="fOpen" accept=".json,application/json" hidden>
+      </div>
+      <p class="note">Share saves what's on the plan now as a file you can send. Opening a file adds it here as a layout. Loading a layout replaces what's on the plan.</p>
     </section>
 
     <section class="sheet" id="shAdd">
@@ -726,23 +742,87 @@ function thumb(L){
   }).join('');
   return `<svg viewBox="-4 -4 ${Wd+8} ${len+8}" aria-hidden="true"><polygon class="t-room" points="${pts}"/>${rects}</svg>`;
 }
-const lay=$('layouts');
-lay.innerHTML=LAYOUTS.map((L,n)=>`<button class="lay" data-l="${n}">${thumb(L)}<span><b>${esc(L.name)}</b><small>${L.items.length} pieces</small></span></button>`).join('');
-const layResets=[];
-lay.querySelectorAll('.lay').forEach(b=>{
-  const L=LAYOUTS[+b.dataset.l],cap=b.querySelector('small'),txt=cap.textContent;let t;
-  const reset=()=>{clearTimeout(t);b.classList.remove('armed');cap.textContent=txt};
-  layResets.push(reset);
-  b.onclick=()=>{
-    if(!b.classList.contains('armed')){
-      layResets.forEach(r=>r());
-      b.classList.add('armed');cap.textContent='Tap again to load';clearTimeout(t);t=setTimeout(reset,3000);return;
-    }
-    clearTimeout(t);reset();
-    loadLayout(L);for(const [id,k] of Object.entries(rIds))$(id).value=R()[k];
-    select(null);if(phone.matches)closeSheets();fitView();commit();
+/* layouts from files: shared as JSON, kept in this browser once opened */
+const LKEY='room-planner-layouts-v1',TYPES=new Set(PRESETS.flatMap(g=>g.items.map(p=>p.type)));
+// Accept only well-formed layouts; anything odd in a file is rejected rather than half-loaded.
+function cleanLayout(d,fallbackName){
+  if(!d||typeof d!=='object')return null;
+  const n=(v,lo,hi)=>typeof v==='number'&&isFinite(v)&&v>=lo&&v<=hi;
+  const r=d.room;
+  if(!r||!n(r.len,50,5000)||!n(r.wTop,50,5000)||!n(r.extra,0,2000)||!n(r.notch,0,5000))return null;
+  if(!Array.isArray(d.items)||d.items.length>300)return null;
+  const items=[];
+  for(const o of d.items){
+    if(!o||!TYPES.has(o.type)||!n(o.w,1,2000)||!n(o.h,1,2000)||!n(o.x,-5000,5000)||!n(o.y,-5000,5000))return null;
+    items.push({type:o.type,name:String(o.name||o.type).slice(0,60),w:o.w,h:o.h,x:o.x,y:o.y,rot:[0,90,180,270].includes(o.rot)?o.rot:0});
+  }
+  const name=String(d.name||fallbackName||'Shared layout').trim().slice(0,60)||'Shared layout';
+  return {name,room:{len:r.len,wTop:r.wTop,extra:r.extra,notch:Math.min(r.notch,r.len)},items};
+}
+let MINE=[];
+try{const a=JSON.parse(localStorage.getItem(LKEY)||'[]');if(Array.isArray(a))MINE=a.map(x=>cleanLayout(x)).filter(Boolean)}catch(e){}
+function saveMine(){try{localStorage.setItem(LKEY,JSON.stringify(MINE))}catch(e){}}
+
+let toastT;
+function toast(msg,bad){const t=$('toast');t.textContent=msg;t.className='toast'+(bad?' bad':'');t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,3200)}
+
+function applyLayout(L){
+  loadLayout(L);for(const [id,k] of Object.entries(rIds))$(id).value=R()[k];
+  select(null);if(phone.matches)closeSheets();fitView();commit();
+}
+// two-tap confirm for any button: first tap shows `armedText` in `cap`, second runs fn
+const armResets=[];
+function twoTap(btn,cap,armedText,fn){
+  const txt=cap.innerHTML;let t;
+  const reset=()=>{clearTimeout(t);btn.classList.remove('armed');cap.innerHTML=txt};
+  armResets.push(reset);
+  btn.onclick=e=>{
+    e.stopPropagation();
+    if(!btn.classList.contains('armed')){armResets.forEach(r=>r());btn.classList.add('armed');cap.textContent=armedText;t=setTimeout(reset,3000);return}
+    reset();fn();
   };
-});
+}
+const lay=$('layouts');
+function renderLayouts(){
+  armResets.length=0;
+  const card=(L,key,sub)=>`<button class="lay" data-k="${key}">${thumb(L)}<span><b>${esc(L.name)}</b><small>${sub}</small></span></button>`;
+  const x=`<svg class="i" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>`;
+  lay.innerHTML=LAYOUTS.map((L,n)=>card(L,'b'+n,`${L.items.length} pieces`)).join('')+
+    MINE.map((L,n)=>`<div class="lay-w">${card(L,'m'+n,`From file · ${L.items.length} pieces`)}<button class="lay-x" data-x="${n}" aria-label="Remove ${esc(L.name)}">${x}</button></div>`).join('');
+  lay.querySelectorAll('.lay').forEach(b=>{
+    const k=b.dataset.k,L=k[0]==='b'?LAYOUTS[+k.slice(1)]:MINE[+k.slice(1)];
+    twoTap(b,b.querySelector('small'),'Tap again to load',()=>applyLayout(L));
+  });
+  lay.querySelectorAll('.lay-x').forEach(b=>{
+    twoTap(b,b,'Remove',()=>{MINE.splice(+b.dataset.x,1);saveMine();renderLayouts()});
+  });
+}
+renderLayouts();
+
+// Share: phones get the share sheet (WhatsApp, Files…), everything else downloads a .json file
+$('bShare').onclick=async()=>{
+  const day=new Date().toISOString().slice(0,10);
+  const data={app:'bedroom-planner',version:1,name:`Bedroom layout ${day}`,room:S.room,items:S.items.map(({id,...o})=>o)};
+  const file=new File([JSON.stringify(data,null,1)],`bedroom-layout-${day}.json`,{type:'application/json'});
+  if(coarse.matches&&navigator.canShare&&navigator.canShare({files:[file]})){
+    try{await navigator.share({files:[file],title:data.name});return}
+    catch(e){if(e.name==='AbortError')return}
+  }
+  const url=URL.createObjectURL(file),a=document.createElement('a');
+  a.href=url;a.download=file.name;document.body.append(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),4000);
+  toast(`Saved ${file.name}`);
+};
+$('bOpen').onclick=()=>$('fOpen').click();
+$('fOpen').onchange=async e=>{
+  const f=e.target.files[0];e.target.value='';if(!f)return;
+  if(f.size>1e6){toast('That file is too big to be a layout',true);return}
+  let L=null;
+  try{L=cleanLayout(JSON.parse(await f.text()),f.name.replace(/\.json$/i,''))}catch(_){}
+  if(!L){toast("That file isn't a planner layout",true);return}
+  MINE.push(L);saveMine();renderLayouts();applyLayout(L);
+  toast(`Loaded “${L.name}”`);
+};
 armBtn($('bClear'),'Clear all furniture','Tap again to clear',()=>{S.items=[];select(null);commit();roomStats()});
 
 /* ---------- gestures: drag pieces, pan, pinch, wheel ---------- */
