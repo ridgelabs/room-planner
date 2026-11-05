@@ -107,6 +107,20 @@ input[type=number],input[type=text]{font-family:var(--f-mono);font-size:.88rem;c
 .btn.danger{color:var(--danger)}
 .btn.armed,.chip.armed{background:var(--danger);border-color:var(--danger);color:#fff}
 
+.lays{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
+.lay{display:flex;flex-direction:column;gap:8px;border:1px solid var(--line);background:var(--paper);border-radius:12px;padding:10px;text-align:left}
+.lay:hover{border-color:var(--accent)}
+.lay svg{width:100%;height:auto;display:block}
+.lay svg .t-room{fill:var(--floor);stroke:var(--wall);stroke-width:2}
+.lay svg .t-it{fill:var(--wood);stroke:var(--ink2);stroke-width:1}
+.lay svg .t-bed{fill:var(--fabric)}
+.lay svg .t-door{fill:none;stroke:var(--ink2);stroke-width:1;stroke-dasharray:4 3}
+.lay b{font-size:.86rem;font-weight:600;display:block}
+.lay small{font-size:.72rem;color:var(--muted);font-family:var(--f-mono)}
+.lay.armed{border-color:var(--accent);background:var(--accent-soft)}
+.lay.armed small{color:var(--accent);font-family:var(--f-ui);font-weight:600}
+.note{font-size:.76rem;color:var(--muted);margin:12px 0 0}
+
 /* bottom bar (phones) */
 .bar{display:none}
 
@@ -216,6 +230,12 @@ input[type=number],input[type=text]{font-family:var(--f-mono);font-size:.88rem;c
       <ul class="issues" id="eIssues"></ul>
     </section>
 
+    <section class="sheet" id="shLayouts">
+      <div class="sh-h"><h2>Layouts</h2><button class="x" data-close aria-label="Close"><svg class="i" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+      <div class="lays" id="layouts"></div>
+      <p class="note">Loading a layout replaces what's on the plan now.</p>
+    </section>
+
     <section class="sheet" id="shAdd">
       <div class="sh-h"><h2>Add furniture</h2><button class="x" data-close aria-label="Close"><svg class="i" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
       <div id="palette"></div>
@@ -223,10 +243,6 @@ input[type=number],input[type=text]{font-family:var(--f-mono);font-size:.88rem;c
 
     <section class="sheet" id="shRoom">
       <div class="sh-h"><h2>Room (cm)</h2><button class="x" data-close aria-label="Close"><svg class="i" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
-      <div class="grp">
-        <div class="grp-t">Layouts — loading one replaces your current arrangement</div>
-        <div class="chips" id="layouts"></div>
-      </div>
       <div class="fields">
         <label class="f">Length<input type="number" id="rLen" min="100" max="2000" inputmode="decimal"></label>
         <label class="f">Width at top<input type="number" id="rTop" min="100" max="2000" inputmode="decimal"></label>
@@ -246,7 +262,8 @@ input[type=number],input[type=text]{font-family:var(--f-mono);font-size:.88rem;c
 </main>
 
 <nav class="bar">
-  <button class="primary" data-sheet="Add" aria-pressed="false"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add furniture</button>
+  <button class="primary" data-sheet="Add" aria-pressed="false"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button>
+  <button data-sheet="Layouts" aria-pressed="false"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Layouts</button>
   <button data-sheet="Room" aria-pressed="false"><svg class="i" viewBox="0 0 24 24"><path d="M3 3h12v6h6v12H3z"/></svg>Room</button>
 </nav>
 
@@ -697,14 +714,34 @@ function armBtn(b,label,armedLabel,fn){
     b.classList.add('armed');b.textContent=armedLabel;t=setTimeout(()=>{b.classList.remove('armed');b.innerHTML=label},3000);
   };
 }
+// layout cards with a small picture of each arrangement
+function thumb(L){
+  const {len,wTop,extra,notch}=L.room,Wd=wTop+extra;
+  const pts=`0,0 ${wTop},0 ${wTop},${notch} ${Wd},${notch} ${Wd},${len} 0,${len}`;
+  const rects=L.items.map(o=>{
+    const a=(o.rot%180)?o.h:o.w,b=(o.rot%180)?o.w:o.h;
+    if(o.type==='door')return `<rect class="t-door" x="${o.x}" y="${o.y}" width="${a}" height="${b}"/>`;
+    if(o.type==='window')return '';
+    return `<rect class="t-it${o.type==='bed'?' t-bed':''}" x="${o.x}" y="${o.y}" width="${a}" height="${b}" rx="2"/>`;
+  }).join('');
+  return `<svg viewBox="-4 -4 ${Wd+8} ${len+8}" aria-hidden="true"><polygon class="t-room" points="${pts}"/>${rects}</svg>`;
+}
 const lay=$('layouts');
-lay.innerHTML=LAYOUTS.map((L,n)=>`<button class="chip" data-l="${n}">${esc(L.name)}<small>${L.items.length} pieces</small></button>`).join('');
-lay.querySelectorAll('.chip').forEach(b=>{
-  const L=LAYOUTS[+b.dataset.l];
-  armBtn(b,b.innerHTML,'Tap again to load',()=>{
+lay.innerHTML=LAYOUTS.map((L,n)=>`<button class="lay" data-l="${n}">${thumb(L)}<span><b>${esc(L.name)}</b><small>${L.items.length} pieces</small></span></button>`).join('');
+const layResets=[];
+lay.querySelectorAll('.lay').forEach(b=>{
+  const L=LAYOUTS[+b.dataset.l],cap=b.querySelector('small'),txt=cap.textContent;let t;
+  const reset=()=>{clearTimeout(t);b.classList.remove('armed');cap.textContent=txt};
+  layResets.push(reset);
+  b.onclick=()=>{
+    if(!b.classList.contains('armed')){
+      layResets.forEach(r=>r());
+      b.classList.add('armed');cap.textContent='Tap again to load';clearTimeout(t);t=setTimeout(reset,3000);return;
+    }
+    clearTimeout(t);reset();
     loadLayout(L);for(const [id,k] of Object.entries(rIds))$(id).value=R()[k];
     select(null);if(phone.matches)closeSheets();fitView();commit();
-  });
+  };
 });
 armBtn($('bClear'),'Clear all furniture','Tap again to clear',()=>{S.items=[];select(null);commit();roomStats()});
 
