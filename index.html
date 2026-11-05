@@ -4,33 +4,30 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Bedroom Planner</title>
+<meta name="theme-color" content="#0f1419">
+<script>try{if(localStorage.getItem('room-planner-v2-theme')==='light'){document.documentElement.dataset.theme='light'}}catch(e){}</script>
 <meta name="description" content="Plan a bedroom layout: drag furniture in a to-scale top view of the room.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
+/* Dark is the default on every device; light is an opt-in from the Room panel */
 :root{
+  --paper:#0f1419; --sheet:#171d24; --ink:#e4e9ee; --ink2:#b4bfca; --muted:#8e9aa6; --line:#29323c;
+  --grid:#1a2129; --grid2:#232c36; --floor:#141a21; --wall:#e4e9ee;
+  --accent:#7ea2ff; --accent-soft:#1f2b45; --danger:#ff6a60; --warn:#f0a630; --ok:#5cc28a;
+  --wood:#5e4c3a; --fabric:#31425a; --fabric2:#3c4f6a; --soft:#463b52; --desk:#3a4535; --stone:#38342e;
+  --shadow:0 6px 24px rgba(0,0,0,.5),0 1px 3px rgba(0,0,0,.4);
+  --f-ui:"Archivo",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+:root[data-theme="light"]{
   --paper:#f2f3f5; --sheet:#ffffff; --ink:#1f2933; --ink2:#4a5562; --muted:#6b7682; --line:#e0e4e9;
   --grid:#eef1f4; --grid2:#e0e5ea; --floor:#fcfcfd; --wall:#1f2933;
   --accent:#2f62d6; --accent-soft:#e4ecfc; --danger:#d23b32; --warn:#c47a00; --ok:#2e7d4f;
   --wood:#e6d8c3; --fabric:#d5e0f0; --fabric2:#eef3fa; --soft:#e8e0f0; --desk:#e0e7d8; --stone:#ece8e1;
-  --shadow:0 6px 24px rgba(20,30,45,.14),0 1px 3px rgba(20,30,45,.1);
-  --f-ui:"Archivo",system-ui,-apple-system,"Segoe UI",sans-serif;
-  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
-  color-scheme:light;
-}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --paper:#0f1419; --sheet:#171d24; --ink:#e4e9ee; --ink2:#b4bfca; --muted:#8e9aa6; --line:#29323c;
-  --grid:#1a2129; --grid2:#232c36; --floor:#141a21; --wall:#e4e9ee;
-  --accent:#7ea2ff; --accent-soft:#1f2b45; --danger:#ff6a60; --warn:#f0a630; --ok:#5cc28a;
-  --wood:#5e4c3a; --fabric:#31425a; --fabric2:#3c4f6a; --soft:#463b52; --desk:#3a4535; --stone:#38342e;
-  --shadow:0 6px 24px rgba(0,0,0,.5),0 1px 3px rgba(0,0,0,.4); color-scheme:dark}}
-:root[data-theme="dark"]{
-  --paper:#0f1419; --sheet:#171d24; --ink:#e4e9ee; --ink2:#b4bfca; --muted:#8e9aa6; --line:#29323c;
-  --grid:#1a2129; --grid2:#232c36; --floor:#141a21; --wall:#e4e9ee;
-  --accent:#7ea2ff; --accent-soft:#1f2b45; --danger:#ff6a60; --warn:#f0a630; --ok:#5cc28a;
-  --wood:#5e4c3a; --fabric:#31425a; --fabric2:#3c4f6a; --soft:#463b52; --desk:#3a4535; --stone:#38342e;
-  --shadow:0 6px 24px rgba(0,0,0,.5),0 1px 3px rgba(0,0,0,.4); color-scheme:dark}
+  --shadow:0 6px 24px rgba(20,30,45,.14),0 1px 3px rgba(20,30,45,.1); color-scheme:light}
 
 *{box-sizing:border-box}
 [hidden]{display:none!important}
@@ -259,6 +256,7 @@ input[type=number],input[type=text]{font-family:var(--f-mono);font-size:.88rem;c
       <div class="toggles">
         <label><input type="checkbox" id="tSnap"> Snap to 5 cm while dragging</label>
         <label><input type="checkbox" id="tClr"> Show gaps to walls</label>
+        <label><input type="checkbox" id="tLight"> Light mode</label>
       </div>
       <div class="statline" id="statline"></div>
       <div class="row">
@@ -744,6 +742,15 @@ const tSnap=$('tSnap'),tClr=$('tClr');
 tSnap.checked=S.snap;tClr.checked=S.clr;
 tSnap.onchange=()=>{S.snap=tSnap.checked;save()};
 tClr.onchange=()=>{S.clr=tClr.checked;save();render()};
+const tLight=$('tLight'),themeMeta=document.querySelector('meta[name="theme-color"]');
+function applyTheme(light){
+  if(light)document.documentElement.dataset.theme='light';else delete document.documentElement.dataset.theme;
+  themeMeta.content=light?'#f2f3f5':'#0f1419';
+  try{localStorage.setItem(KEY+'-theme',light?'light':'dark')}catch(_){}
+}
+tLight.checked=document.documentElement.dataset.theme==='light';
+if(tLight.checked)themeMeta.content='#f2f3f5';
+tLight.onchange=()=>{applyTheme(tLight.checked);render()};
 function armBtn(b,label,armedLabel,fn){
   let t;b.onclick=()=>{
     if(b.classList.contains('armed')){clearTimeout(t);b.classList.remove('armed');b.innerHTML=label;fn();return}
