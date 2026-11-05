@@ -40,24 +40,25 @@ button{font:inherit;color:inherit;cursor:pointer;background:none;border:0;paddin
 button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
 
-/* top bar */
-.top{display:flex;align-items:center;gap:12px;background:var(--sheet);border-bottom:1px solid var(--line);
-  padding:calc(10px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) 10px max(16px,env(safe-area-inset-left,0px));z-index:5}
-.top h1{font-size:1.02rem;font-weight:650;margin:0;letter-spacing:-.01em;white-space:nowrap}
-.top .dims{font-family:var(--f-mono);font-size:.74rem;color:var(--muted);white-space:nowrap}
-.status{margin-left:auto;display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:6px 12px;font-size:.8rem;font-weight:600;white-space:nowrap;border:1px solid transparent}
-.status.ok{color:var(--ok);background:color-mix(in srgb,var(--ok) 10%,transparent)}
-.status.bad{color:var(--danger);background:color-mix(in srgb,var(--danger) 11%,transparent);border-color:color-mix(in srgb,var(--danger) 30%,transparent)}
-.status.warn{color:var(--warn);background:color-mix(in srgb,var(--warn) 12%,transparent);border-color:color-mix(in srgb,var(--warn) 30%,transparent)}
+/* floating controls — the plan gets the whole screen */
+:root{--st:env(safe-area-inset-top,0px);--sb:env(safe-area-inset-bottom,0px);--sl:env(safe-area-inset-left,0px);--sr:env(safe-area-inset-right,0px)}
+.status{position:absolute;z-index:6;top:calc(10px + var(--st));left:calc(10px + var(--sl));display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:6px 12px;font-size:.8rem;font-weight:600;white-space:nowrap;border:1px solid transparent;box-shadow:var(--shadow);background:var(--sheet)}
+.status.bad{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 35%,transparent)}
+.status.warn{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 35%,transparent)}
 .status svg.i{width:16px;height:16px}
 
-/* main area */
-main{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 320px}
-.plan{position:relative;min-width:0;min-height:0;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+main{flex:1;min-height:0;display:flex}
+.plan{position:relative;flex:1;min-width:0;min-height:0;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 #plan{position:absolute;inset:0;width:100%;height:100%;display:block}
-.fab{position:absolute;top:12px;right:12px;width:40px;height:40px;border-radius:10px;background:var(--sheet);border:1px solid var(--line);box-shadow:var(--shadow);display:grid;place-items:center;color:var(--ink2)}
+.fab{position:absolute;z-index:6;top:calc(10px + var(--st));right:calc(10px + var(--sr));width:40px;height:40px;border-radius:12px;background:var(--sheet);border:1px solid var(--line);box-shadow:var(--shadow);display:grid;place-items:center;color:var(--ink2)}
 .fab:hover{color:var(--accent)}
-.tip{position:absolute;left:12px;bottom:12px;right:64px;font-size:.76rem;color:var(--muted);pointer-events:none}
+.ctl{position:absolute;z-index:6;right:calc(10px + var(--sr));bottom:calc(10px + var(--sb));display:flex;flex-direction:column;gap:8px}
+.ctl button{width:46px;height:46px;border-radius:14px;background:var(--sheet);border:1px solid var(--line);box-shadow:var(--shadow);display:grid;place-items:center;color:var(--ink2)}
+.ctl button:hover{color:var(--accent)}
+.ctl button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
+.ctl button.primary{background:var(--accent);border-color:var(--accent);color:var(--sheet)}
+.ctl button.primary[aria-pressed="true"]{opacity:.85;color:var(--sheet)}
+.tip{position:absolute;z-index:5;left:calc(10px + var(--sl));bottom:calc(10px + var(--sb));right:70px;font-size:.76rem;color:var(--muted);pointer-events:none}
 .tip span{background:color-mix(in srgb,var(--sheet) 85%,transparent);border-radius:6px;padding:4px 8px;display:inline-block}
 
 /* popup */
@@ -78,11 +79,15 @@ main{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 320px}
 .pop-row button.done{color:var(--accent)}
 
 /* side / sheets */
-aside{background:var(--sheet);border-left:1px solid var(--line);overflow:auto;overscroll-behavior:contain}
-.sheet{padding:16px;border-bottom:1px solid var(--line)}
+/* panels float over the plan only while open: a side card on desktop, a bottom sheet on phones */
+aside{position:fixed;z-index:20;display:none;background:var(--sheet);border:1px solid var(--line);box-shadow:var(--shadow);overflow:auto;overscroll-behavior:contain;
+  top:12px;right:68px;width:340px;max-height:calc(100dvh - 24px);border-radius:16px}
+aside.show{display:block}
+.sheet{display:none;padding:16px}
+.sheet.open{display:block}
 .sh-h{display:flex;align-items:center;justify-content:space-between;margin:0 0 12px}
 .sh-h h2{font-size:.72rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin:0;font-weight:600}
-.sh-h .x{display:none;width:32px;height:32px;border-radius:8px;place-items:center;color:var(--muted)}
+.sh-h .x{display:grid;width:32px;height:32px;border-radius:8px;place-items:center;color:var(--muted)}
 .grp{margin-bottom:12px}.grp:last-child{margin-bottom:0}
 .grp-t{font-size:.74rem;color:var(--muted);margin-bottom:6px}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
@@ -131,8 +136,6 @@ input[type=number],input[type=text]{font-family:var(--f-mono);font-size:.88rem;c
 .toast{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);z-index:30;background:var(--ink);color:var(--sheet);font-size:.82rem;font-weight:500;padding:9px 14px;border-radius:10px;box-shadow:var(--shadow);max-width:calc(100% - 32px);text-align:center}
 .toast.bad{background:var(--danger);color:#fff}
 
-/* bottom bar (phones) */
-.bar{display:none}
 
 /* svg */
 .room{fill:var(--floor)}
@@ -170,39 +173,25 @@ input[type=number],input[type=text]{font-family:var(--f-mono);font-size:.88rem;c
 .ovl.amber{stroke:var(--warn)}
 
 @media (max-width:860px){
-  main{grid-template-columns:minmax(0,1fr)}
-  aside{position:fixed;left:0;right:0;bottom:calc(60px + env(safe-area-inset-bottom,0px));max-height:62dvh;border:1px solid var(--line);border-bottom:0;border-radius:16px 16px 0 0;box-shadow:var(--shadow);z-index:20;display:none}
-  aside.show{display:block}
-  .sheet{display:none;border:0;padding:14px max(16px,env(safe-area-inset-right,0px)) 18px max(16px,env(safe-area-inset-left,0px))}
-  .sheet.open{display:block}
-  .sh-h .x{display:grid}
-  .bar{display:flex;gap:8px;background:var(--sheet);border-top:1px solid var(--line);height:calc(60px + env(safe-area-inset-bottom,0px));
-    padding:8px max(16px,env(safe-area-inset-right,0px)) calc(8px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));z-index:21}
-  .bar button{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;border-radius:10px;font-weight:600;font-size:.88rem;color:var(--ink2)}
-  .bar button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent)}
-  .bar button.primary{background:var(--accent);color:var(--sheet)}
-  .bar button.primary[aria-pressed="true"]{background:var(--accent);color:var(--sheet);opacity:.85}
+  aside{top:auto;left:0;right:0;bottom:0;width:auto;max-height:62dvh;border-bottom:0;border-radius:16px 16px 0 0}
+  .sheet{padding:14px max(16px,var(--sr)) calc(18px + var(--sb)) max(16px,var(--sl))}
   input[type=number],input[type=text]{font-size:16px}
-  .top .dims{display:none}
 }
-@media (max-width:380px){.top h1{font-size:.95rem}.status{padding:5px 10px}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 <style id="dyn"></style>
 </head>
 <body>
 
-<header class="top">
-  <div>
-    <h1>Bedroom Planner</h1>
-  </div>
-  <span class="dims" id="dims">420 × 299 cm</span>
-  <button class="status ok" id="status" title="Show problems one by one"></button>
-</header>
-
 <main>
   <div class="plan" id="planWrap">
-    <svg id="plan" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Room floor plan, top view"></svg>
+    <svg id="plan" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Bedroom floor plan, top view"></svg>
+    <button class="status" id="status" title="Show problems one by one" hidden></button>
+    <div class="ctl">
+      <button class="primary" data-sheet="Add" aria-pressed="false" aria-label="Add furniture" title="Add furniture"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+      <button data-sheet="Layouts" aria-pressed="false" aria-label="Layouts" title="Layouts"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>
+      <button data-sheet="Room" aria-pressed="false" aria-label="Room size and settings" title="Room size and settings"><svg class="i" viewBox="0 0 24 24"><path d="M3 3h12v6h6v12H3z"/></svg></button>
+    </div>
     <button class="fab" id="fit" title="Reset zoom" aria-label="Reset zoom" hidden>
       <svg class="i" viewBox="0 0 24 24"><path d="M3 9V4a1 1 0 0 1 1-1h5M15 3h5a1 1 0 0 1 1 1v5M21 15v5a1 1 0 0 1-1 1h-5M9 21H4a1 1 0 0 1-1-1v-5"/></svg>
     </button>
@@ -279,11 +268,6 @@ input[type=number],input[type=text]{font-family:var(--f-mono);font-size:.88rem;c
   </aside>
 </main>
 
-<nav class="bar">
-  <button class="primary" data-sheet="Add" aria-pressed="false"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button>
-  <button data-sheet="Layouts" aria-pressed="false"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Layouts</button>
-  <button data-sheet="Room" aria-pressed="false"><svg class="i" viewBox="0 0 24 24"><path d="M3 3h12v6h6v12H3z"/></svg>Room</button>
-</nav>
 
 <script>
 /* ---------- data ---------- */
@@ -437,12 +421,20 @@ const level=list=>!list?null:list.some(m=>m.k==='bad')?'bad':'warn';
 
 /* ---------- view: zoom & pan ---------- */
 const V={k:1,kFit:1,ox:0,oy:0,fit:true,cw:1,ch:1};
-const bounds=()=>({x:-48,y:-44,w:W()+96,h:R().len+88});
+const bounds=()=>({x:0,y:0,w:W(),h:R().len});
+const PAD=30,DIM=14; // screen px around the room: just enough for the dimension lines
+// phone notches / home bar: read the safe-area insets so the fitted room avoids them
+const insetProbe=document.createElement('div');
+insetProbe.style.cssText='position:fixed;visibility:hidden;pointer-events:none;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)';
+document.body.append(insetProbe);
+function insets(){const c=getComputedStyle(insetProbe);return {t:parseFloat(c.paddingTop)||0,r:parseFloat(c.paddingRight)||0,b:parseFloat(c.paddingBottom)||0,l:parseFloat(c.paddingLeft)||0}}
 function measure(){const r=svg.getBoundingClientRect();V.cw=Math.max(1,r.width);V.ch=Math.max(1,r.height)}
-function calcFit(){const b=bounds();return Math.min(V.cw/b.w,V.ch/b.h)}
+function calcFit(){const b=bounds(),s=insets();return Math.max(.05,Math.min((V.cw-2*PAD-s.l-s.r)/b.w,(V.ch-2*PAD-s.t-s.b)/b.h))}
 function fitView(){
-  measure();const b=bounds();V.kFit=calcFit();V.k=V.kFit;
-  V.ox=b.x-(V.cw/V.k-b.w)/2;V.oy=b.y-(V.ch/V.k-b.h)/2;V.fit=true;
+  measure();const b=bounds(),s=insets();V.kFit=calcFit();V.k=V.kFit;
+  V.ox=b.x-(s.l+(V.cw-s.l-s.r)/2)/V.k+b.w/2;
+  V.oy=b.y-(s.t+(V.ch-s.t-s.b)/2)/V.k+b.h/2;
+  V.fit=true;
 }
 const clampK=k=>Math.min(V.kFit*8,Math.max(V.kFit*.8,k));
 function clampView(){ // keep at least part of the room on screen
@@ -576,8 +568,9 @@ function render(){
   <clipPath id="rc"><polygon points="${pts}"/></clipPath>
   <mask id="outM" maskUnits="userSpaceOnUse" x="-5000" y="-5000" width="10000" height="10000"><rect x="-5000" y="-5000" width="10000" height="10000" fill="#fff"/><polygon points="${pts}" fill="#000"/></mask></defs>`;
   s+=`<polygon class="room" points="${pts}"/><rect x="0" y="0" width="${Wd}" height="${len}" fill="url(#g50)" clip-path="url(#rc)" pointer-events="none"/>`;
-  s+=dimH(0,wTop,-20,wTop,u)+dimV(0,len,-22,len,u)+dimH(0,Wd,len+22,Wd,u);
-  if(extra>0){s+=dimV(0,notch,Wd+22,notch,u)+dimV(notch,len,Wd+22,len-notch,u)}
+  const d=DIM*u;
+  s+=dimH(0,wTop,-d,wTop,u)+dimV(0,len,-d,len,u)+dimH(0,Wd,len+d,Wd,u);
+  if(extra>0){s+=dimV(0,notch,Wd+d,notch,u)+dimV(notch,len,Wd+d,len-notch,u)}
   const rank=i=>i.type==='rug'?0:OPENING.has(i.type)?2:1;
   const ordered=[...S.items].sort((a,b)=>rank(a)-rank(b));
   for(const i of ordered)if(rank(i)<2)s+=itemSvg(i,level(LAST.by.get(i.id)),u);
@@ -602,11 +595,10 @@ function render(){
   status();placePop();
 }
 
-/* ---------- top bar status ---------- */
+/* ---------- problems chip (only shown when something is wrong) ---------- */
 function status(){
   const b=$('status'),n=LAST.n,lv=[...LAST.by.values()].some(l=>level(l)==='bad')?'bad':'warn';
-  $('dims').textContent=`${R().len} × ${W()} cm`;
-  if(!n){b.className='status ok';b.innerHTML=`<svg class="i" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>All clear`;return}
+  b.hidden=!n;if(!n)return;
   b.className='status '+lv;
   b.innerHTML=`<svg class="i" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>${n} ${n===1?'problem':'problems'}`;
 }
@@ -653,7 +645,7 @@ pop.addEventListener('click',e=>{
   else if(a==='nudge'){popMode='nudge';render()}
   else if(a==='done'){popMode='main';render()}
   else if(a==='dup')dup(i);
-  else if(a==='edit'){if(phone.matches)openSheet('Edit');else{$('pW').focus();$('pW').select()}}
+  else if(a==='edit'){openSheet('Edit');if(!phone.matches){$('pW').focus();$('pW').select()}}
   else if(a==='del'){
     if(b.classList.contains('armed')){disarm();del(i);return}
     b.classList.add('armed');b.querySelector('span').textContent='Sure?';delT=setTimeout(disarm,2500);
@@ -675,7 +667,7 @@ const sheets=[...document.querySelectorAll('.sheet')];
 function syncSheets(){
   const any=sheets.some(s=>s.classList.contains('open')&&!s.hidden);
   side.classList.toggle('show',any);
-  document.querySelectorAll('.bar [data-sheet]').forEach(b=>b.setAttribute('aria-pressed',$('sh'+b.dataset.sheet).classList.contains('open')));
+  document.querySelectorAll('.ctl [data-sheet]').forEach(b=>b.setAttribute('aria-pressed',$('sh'+b.dataset.sheet).classList.contains('open')));
 }
 function openSheet(name,toggle){
   const el=$('sh'+name),was=el.classList.contains('open');
@@ -684,7 +676,7 @@ function openSheet(name,toggle){
   syncSheets();render();
 }
 function closeSheets(){if(!sheets.some(s=>s.classList.contains('open')))return;sheets.forEach(s=>s.classList.remove('open'));syncSheets()}
-document.querySelectorAll('.bar [data-sheet]').forEach(b=>b.onclick=()=>openSheet(b.dataset.sheet,true));
+document.querySelectorAll('.ctl [data-sheet]').forEach(b=>b.onclick=()=>openSheet(b.dataset.sheet,true));
 document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>{closeSheets();render()});
 
 /* edit sheet */
@@ -882,7 +874,7 @@ function pinchStart(){
   G={type:'pinch',d0:Math.hypot(a.x-b.x,a.y-b.y)||1,k0:V.k,wx:V.ox+mx/V.k,wy:V.oy+my/V.k};
 }
 svg.addEventListener('pointerdown',e=>{
-  $('tip').hidden=true;
+  if(!$('tip').hidden){$('tip').hidden=true;try{localStorage.setItem(KEY+'-tip','1')}catch(_){}}
   if(phone.matches&&side.classList.contains('show')){closeSheets()}
   try{svg.setPointerCapture(e.pointerId)}catch(_){}
   P.set(e.pointerId,{x:e.clientX,y:e.clientY});
@@ -942,7 +934,7 @@ $('fit').onclick=()=>{fitView();render()};
 document.addEventListener('keydown',e=>{
   if(e.target.matches('input'))return;
   const i=selItem(),k=e.key;
-  if(k==='Escape'){if(i){select(null);render()}return}
+  if(k==='Escape'){if(side.classList.contains('show')){closeSheets();render()}else if(i){select(null);render()}return}
   if(!i)return;
   const d=e.shiftKey?10:1;
   if(k==='ArrowLeft')i.x-=d;else if(k==='ArrowRight')i.x+=d;else if(k==='ArrowUp')i.y-=d;else if(k==='ArrowDown')i.y+=d;
@@ -956,6 +948,7 @@ document.addEventListener('keydown',e=>{
 /* ---------- start ---------- */
 function setTip(){$('tipText').textContent=coarse.matches?'Tap a piece for options · drag to move · pinch to zoom':'Click a piece for options · drag to move · scroll to zoom · R rotate · arrows nudge'}
 setTip();coarse.addEventListener?.('change',setTip);
+try{if(localStorage.getItem(KEY+'-tip'))$('tip').hidden=true}catch(_){}
 phone.addEventListener?.('change',()=>{closeSheets();render()});
 new ResizeObserver(()=>{
   const was=V.fit,b=bounds();measure();
