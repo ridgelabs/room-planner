@@ -156,6 +156,8 @@ input[type=number],input[type=text]{font-family:var(--f-mono);font-size:.88rem;c
 .lbl2{fill:var(--muted);font-family:var(--f-mono);pointer-events:none}
 .it.bad .base{stroke:var(--danger)}
 .it.warn .base{stroke:var(--warn)}
+.door-box{fill:transparent;stroke:transparent}
+.it.warn .base.door-box{stroke:var(--warn)}
 .sel{fill:none;stroke:var(--accent);pointer-events:none}
 .clr{stroke:var(--accent);pointer-events:none}
 .guide{stroke:var(--accent);opacity:.8;pointer-events:none}
@@ -335,6 +337,17 @@ const LAYOUTS=[
   {type:'side',name:'Side table',w:45,h:40,rot:180,x:222,y:0},
   {type:'dresser',name:'Dresser',w:60,h:45,rot:90,x:0,y:90},
   {type:'wardrobe',name:'4-door wardrobe',w:180,h:50,rot:90,x:0,y:150},
+  {type:'door',name:'Door',w:90,h:90,rot:180,x:209,y:330}]},
+ // Recommended: bed headboard on the right wall (window and both doors stay clear),
+ // wardrobe in the top-left corner with the dresser attached below it.
+ {name:'Default 3',room:{len:420,wTop:288,extra:11,notch:125},items:[
+  {type:'window',name:'Window',w:100,h:12,rot:0,x:94,y:0},
+  {type:'wardrobe',name:'4-door wardrobe',w:180,h:50,rot:270,x:0,y:0},
+  {type:'dresser',name:'Dresser',w:60,h:45,rot:90,x:0,y:180},
+  {type:'side',name:'Side table',w:45,h:40,rot:90,x:248,y:80},
+  {type:'bed',name:'Queen bed',w:152,h:198,rot:90,x:101,y:125},
+  {type:'side',name:'Side table',w:45,h:40,rot:90,x:259,y:277},
+  {type:'door',name:'Bathroom door',w:75,h:75,rot:270,x:0,y:345},
   {type:'door',name:'Door',w:90,h:90,rot:180,x:209,y:330}]}
 ];
 function loadLayout(L){S.room={...L.room};S.items=L.items.map(o=>({...o,id:uid++}))}
@@ -483,7 +496,7 @@ function deco(i){
     s+=`<rect class="decf c-bed2" x="${x0+3}" y="${y0+3}" width="13" height="${h-6}" rx="4"/><rect class="decf c-bed2" x="${x0+w-16}" y="${y0+3}" width="13" height="${h-6}" rx="4"/>`;
     if(i.type==='sofa')s+=`<line class="dec" x1="0" y1="${y0+18}" x2="0" y2="${y0+h-3}"/>`;break;
    case 'door':
-    s+=`<rect class="base" x="${x0}" y="${y0}" width="${w}" height="${h}" fill="transparent" stroke="transparent"/>`;
+    s+=`<rect class="base door-box" x="${x0}" y="${y0}" width="${w}" height="${h}"/>`;
     s+=`<line x1="${x0}" y1="${y0}" x2="${x0+w}" y2="${y0}" stroke="var(--floor)" stroke-width="${4/V.k}"/>`;
     s+=`<path class="door-arc" d="M ${x0+w} ${y0} A ${w} ${w} 0 0 1 ${x0} ${y0+w}"/>`;
     s+=`<line class="door-leaf" x1="${x0}" y1="${y0}" x2="${x0}" y2="${y0+w}"/>`;break;
