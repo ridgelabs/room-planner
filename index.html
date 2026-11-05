@@ -134,6 +134,7 @@ input[type=number],input[type=text]{font-family:var(--f-mono);font-size:.88rem;c
 .it.warn .base{stroke:var(--warn)}
 .sel{fill:none;stroke:var(--accent);pointer-events:none}
 .clr{stroke:var(--accent);pointer-events:none}
+.guide{stroke:var(--accent);opacity:.8;pointer-events:none}
 .tag{pointer-events:none}
 .tag text{font-family:var(--f-mono);font-weight:500}
 .tag.blue rect{fill:var(--sheet);stroke:var(--accent)} .tag.blue text{fill:var(--accent)}
@@ -397,7 +398,7 @@ function dynStyle(u){
 .dimt,.tag text{font-size:${10.5*u}px}.tag rect{stroke-width:${u}px}.clr{stroke-width:${u}px}
 .door-leaf{stroke-width:${2*u}px}.door-arc{stroke-width:${.75*u}px;stroke-dasharray:${3*u}px ${2.5*u}px}
 .sel{stroke-width:${1.5*u}px;stroke-dasharray:${5*u}px ${3*u}px}.c-rug{stroke-dasharray:${5*u}px ${4*u}px}
-.c-window{stroke-width:${u}px}.ovl{stroke-width:${1.25*u}px}`;
+.c-window{stroke-width:${u}px}.ovl{stroke-width:${1.25*u}px}.guide{stroke-width:${u}px;stroke-dasharray:${2*u}px ${3*u}px}`;
 }
 function deco(i){
   const w=i.w,h=i.h,x0=-w/2,y0=-h/2;
@@ -514,6 +515,11 @@ function render(){
     if(g.k==='wall'){const i=g.i;s+=`<rect x="${i.x}" y="${i.y}" width="${ew(i)}" height="${eh(i)}" fill="url(#hR)" mask="url(#outM)" pointer-events="none"/>`;tags+=tag(g.tx,g.ty,`${g.p} cm past wall`,'red',u)}
     else if(g.k==='ov'){s+=`<rect class="ovl" x="${g.x}" y="${g.y}" width="${g.w}" height="${g.h}" fill="url(#hR)"/>`;tags+=tag(g.x+g.w/2,g.y+g.h/2,`${g.amt} cm`,'red',u)}
     else s+=`<rect class="ovl amber" x="${g.x}" y="${g.y}" width="${g.w}" height="${g.h}" fill="url(#hA)"/>`;
+  }
+  if(G&&G.type==='drag'&&G.moved&&G.guides){
+    const gd=G.guides,ex=12;
+    if(gd.x!==null)s+=`<line class="guide" x1="${gd.x}" y1="${-ex}" x2="${gd.x}" y2="${len+ex}"/>`;
+    if(gd.y!==null)s+=`<line class="guide" x1="${-ex}" y1="${gd.y}" x2="${Wd+ex}" y2="${gd.y}"/>`;
   }
   const si=selItem();
   if(si){const p=3*u;s+=`<rect class="sel" x="${si.x-p}" y="${si.y-p}" width="${ew(si)+2*p}" height="${eh(si)+2*p}" rx="${2*u}"/>`;if(S.clr&&!(G&&G.type==='pinch'))s+=clearance(si,u)}
@@ -686,13 +692,26 @@ armBtn($('bClear'),'Clear all furniture','Tap again to clear',()=>{S.items=[];se
 
 /* ---------- gestures: drag pieces, pan, pinch, wheel ---------- */
 const P=new Map();let G=null;
+// Snap a piece's edges (and so its corners) to walls, the step corner and nearby pieces.
+// Returns guide lines to draw for whatever it snapped to.
 function magnet(i){
-  const M=6,a=ew(i),b=eh(i);
-  if(Math.abs(i.x)<M)i.x=0;
-  const rl=rightLimit(i);if(Math.abs(i.x+a-rl)<M)i.x=rl-a;
-  if(Math.abs(i.y)<M)i.y=0;
-  if(i.x+a>R().wTop&&Math.abs(i.y-R().notch)<M)i.y=R().notch;
-  if(Math.abs(i.y+b-R().len)<M)i.y=R().len-b;
+  const M=Math.max(4,9/V.k),a=ew(i),b=eh(i),{len,wTop,notch}=R(),NEAR=40;
+  const xs=[[0,null],[rightLimit(i)-a,null],[wTop,wTop],[wTop-a,wTop]];
+  const ys=[[0,null],[len-b,null],[notch,notch],[notch-b,notch]];
+  for(const o of S.items){
+    if(o===i||o.type==='rug')continue;
+    const x1=o.x,x2=o.x+ew(o),y1=o.y,y2=o.y+eh(o);
+    // only pieces that are close on the other axis
+    if(i.y<y2+NEAR&&i.y+b>y1-NEAR){xs.push([x2,x2],[x1-a,x1],[x1,x1],[x2-a,x2])}
+    if(i.x<x2+NEAR&&i.x+a>x1-NEAR){ys.push([y2,y2],[y1-b,y1],[y1,y1],[y2-b,y2])}
+  }
+  const pick=(v,c)=>{let best=null,bd=M;for(const [p,g] of c){const d=Math.abs(v-p);if(d<bd){bd=d;best=[p,g]}}return best};
+  const g={x:null,y:null};
+  const px=pick(i.x,xs);if(px){i.x=px[0];g.x=px[1]}
+  const py=pick(i.y,ys);if(py){i.y=py[0];g.y=py[1]}
+  // stepping into the narrow top part can change the right-wall limit
+  if(i.y<notch&&i.x+a>wTop&&Math.abs(i.x+a-wTop)<M){i.x=wTop-a}
+  return g;
 }
 function pinchStart(){
   const [a,b]=[...P.values()],r=svg.getBoundingClientRect();
@@ -733,7 +752,7 @@ svg.addEventListener('pointermove',e=>{
   G.moved=true;
   if(G.type==='drag'){
     const p=pt(e),i=G.i,st=S.snap?5:1;
-    i.x=Math.round((p.x-G.dx)/st)*st;i.y=Math.round((p.y-G.dy)/st)*st;magnet(i);render();
+    i.x=Math.round((p.x-G.dx)/st)*st;i.y=Math.round((p.y-G.dy)/st)*st;G.guides=magnet(i);render();
   }else{
     V.ox=G.ox0-(e.clientX-G.sx)/V.k;V.oy=G.oy0-(e.clientY-G.sy)/V.k;V.fit=false;clampView();render();
   }
