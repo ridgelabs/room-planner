@@ -850,7 +850,8 @@ $('fOpen').onchange=async e=>{
   MINE.push(L);saveMine();renderLayouts();applyLayout(L);
   toast(`Loaded “${L.name}”`);
 };
-armBtn($('bClear'),'Clear all furniture','Tap again to clear',()=>{S.items=[];select(null);commit();roomStats()});
+// windows and doors are part of the room, so they stay
+armBtn($('bClear'),'Clear all furniture','Tap again to clear',()=>{S.items=S.items.filter(i=>OPENING.has(i.type));select(null);commit()});
 
 /* ---------- gestures: drag pieces, pan, pinch, wheel ---------- */
 const P=new Map();let G=null;
