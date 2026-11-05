@@ -105,7 +105,7 @@ input[type=number],input[type=text]{font-family:var(--f-mono);font-size:.88rem;c
 .btn{font-size:.82rem;border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:8px 12px}
 .btn:hover{border-color:var(--accent)}
 .btn.danger{color:var(--danger)}
-.btn.armed{background:var(--danger);border-color:var(--danger);color:#fff}
+.btn.armed,.chip.armed{background:var(--danger);border-color:var(--danger);color:#fff}
 
 /* bottom bar (phones) */
 .bar{display:none}
@@ -223,6 +223,10 @@ input[type=number],input[type=text]{font-family:var(--f-mono);font-size:.88rem;c
 
     <section class="sheet" id="shRoom">
       <div class="sh-h"><h2>Room (cm)</h2><button class="x" data-close aria-label="Close"><svg class="i" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+      <div class="grp">
+        <div class="grp-t">Layouts — loading one replaces your current arrangement</div>
+        <div class="chips" id="layouts"></div>
+      </div>
       <div class="fields">
         <label class="f">Length<input type="number" id="rLen" min="100" max="2000" inputmode="decimal"></label>
         <label class="f">Width at top<input type="number" id="rTop" min="100" max="2000" inputmode="decimal"></label>
@@ -235,7 +239,6 @@ input[type=number],input[type=text]{font-family:var(--f-mono);font-size:.88rem;c
       </div>
       <div class="statline" id="statline"></div>
       <div class="row">
-        <button class="btn" id="bReset">Reset to default</button>
         <button class="btn danger" id="bClear">Clear all furniture</button>
       </div>
     </section>
@@ -284,17 +287,20 @@ const svg=$('plan'),wrap=$('planWrap'),pop=$('pop'),side=$('side');
 const phone=matchMedia('(max-width:860px)'),coarse=matchMedia('(pointer:coarse)');
 let uid=1,sel=null,popMode='main',LAST={n:0,by:new Map(),regs:[]};
 
-function defaultItems(room){
-  const W=room.wTop+room.extra,len=room.len,n=room.notch;
-  // Queen bed, headboard against the right wall, centred on the lower (wider) part of that wall
-  const bed={type:'bed',name:'Queen bed',w:152,h:198,rot:90};
-  const lowY=n,span=len-n;
-  bed.x=W-198; bed.y=span>=152?Math.round(lowY+(span-152)/2):Math.max(0,len-152);
-  return [bed].map(o=>({...o,id:uid++}));
-}
+// Ready-made layouts, offered in the Room panel. The first one loads on a first visit.
+const LAYOUTS=[
+ {name:'Default 1',room:{len:420,wTop:288,extra:11,notch:125},items:[
+  {type:'dresser',name:'Dresser',w:60,h:45,rot:90,x:0,y:0},
+  {type:'wardrobe',name:'4-door wardrobe',w:180,h:50,rot:90,x:0,y:60},
+  {type:'bed',name:'Queen bed',w:152,h:198,rot:90,x:101,y:125},
+  {type:'side',name:'Side table',w:45,h:40,rot:90,x:248,y:80},
+  {type:'side',name:'Side table',w:40,h:40,rot:90,x:259,y:277},
+  {type:'door',name:'Door',w:90,h:90,rot:180,x:209,y:330}]}
+];
+function loadLayout(L){S.room={...L.room};S.items=L.items.map(o=>({...o,id:uid++}))}
 let S;
 try{S=JSON.parse(localStorage.getItem(KEY)||'null')}catch(e){S=null}
-if(!S||!S.room||!Array.isArray(S.items))S={room:{...ROOM0},items:defaultItems(ROOM0),snap:true,clr:true};
+if(!S||!S.room||!Array.isArray(S.items)){S={snap:true,clr:true};loadLayout(LAYOUTS[0])}
 S.items.forEach(i=>{if(!i.id)i.id=uid++;uid=Math.max(uid,i.id+1)});
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 
@@ -680,13 +686,18 @@ tSnap.onchange=()=>{S.snap=tSnap.checked;save()};
 tClr.onchange=()=>{S.clr=tClr.checked;save();render()};
 function armBtn(b,label,armedLabel,fn){
   let t;b.onclick=()=>{
-    if(b.classList.contains('armed')){clearTimeout(t);b.classList.remove('armed');b.textContent=label;fn();return}
-    b.classList.add('armed');b.textContent=armedLabel;t=setTimeout(()=>{b.classList.remove('armed');b.textContent=label},3000);
+    if(b.classList.contains('armed')){clearTimeout(t);b.classList.remove('armed');b.innerHTML=label;fn();return}
+    b.classList.add('armed');b.textContent=armedLabel;t=setTimeout(()=>{b.classList.remove('armed');b.innerHTML=label},3000);
   };
 }
-armBtn($('bReset'),'Reset to default','Tap again to reset',()=>{
-  S.room={...ROOM0};S.items=defaultItems(S.room);for(const [id,k] of Object.entries(rIds))$(id).value=R()[k];
-  select(null);fitView();commit();roomStats();
+const lay=$('layouts');
+lay.innerHTML=LAYOUTS.map((L,n)=>`<button class="chip" data-l="${n}">${esc(L.name)}<small>${L.items.length} pieces</small></button>`).join('');
+lay.querySelectorAll('.chip').forEach(b=>{
+  const L=LAYOUTS[+b.dataset.l];
+  armBtn(b,b.innerHTML,'Tap again to load',()=>{
+    loadLayout(L);for(const [id,k] of Object.entries(rIds))$(id).value=R()[k];
+    select(null);if(phone.matches)closeSheets();fitView();commit();
+  });
 });
 armBtn($('bClear'),'Clear all furniture','Tap again to clear',()=>{S.items=[];select(null);commit();roomStats()});
 
