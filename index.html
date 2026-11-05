@@ -953,6 +953,30 @@ document.addEventListener('keydown',e=>{
   e.preventDefault();commit();
 });
 
+/* ---------- always run the newest version ----------
+   GitHub Pages lets browsers reuse a cached copy for up to 10 minutes. On load (and when the
+   tab comes back into view) fetch the page fresh; if its BUILD stamp differs, reload once with
+   a cache-busting ?v= so the browser and CDN serve the new file. Change BUILD on every
+   release (any new value works; a UTC timestamp is used). */
+const BUILD='20261105163257';
+async function checkForUpdate(){
+  if(location.protocol==='file:')return;
+  try{
+    const r=await fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'});
+    if(!r.ok)return;
+    // pattern is split so stamping BUILD with a search-and-replace never rewrites this line
+    const m=(await r.text()).match(new RegExp('const BU'+"ILD='([^']*)'"));
+    if(!m||m[1]===BUILD)return;
+    const tried='room-planner-update-'+m[1];
+    if(sessionStorage.getItem(tried))return; // reload at most once per new version
+    sessionStorage.setItem(tried,'1');
+    location.replace(location.pathname+'?v='+encodeURIComponent(m[1])+location.hash);
+  }catch(_){}
+}
+if(/[?&]v=/.test(location.search))history.replaceState(null,'',location.pathname+location.hash);
+checkForUpdate();
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkForUpdate()});
+
 /* ---------- start ---------- */
 function setTip(){$('tipText').textContent=coarse.matches?'Tap a piece for options · drag to move · pinch to zoom':'Click a piece for options · drag to move · scroll to zoom · R rotate · arrows nudge'}
 setTip();coarse.addEventListener?.('change',setTip);
